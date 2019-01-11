@@ -47,7 +47,7 @@ public:
 	void SetAsLineStrips(std::vector<int> num_lsverts);
 
 	void Draw(GLenum mode, const std::vector<int> &&attribs) const;
-	void DrawLineStrips(const std::vector<int> &&attribs) const;
+	void DrawLineStrips(const std::vector<int> &&attribs, float keep_ratio) const;
 
 private:
 	bool initialized;

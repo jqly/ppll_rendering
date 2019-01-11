@@ -57,7 +57,7 @@ public:
 	xy::mat4 Proj() const override;
 	xy::mat4 View() const override;
 	float Near() const { return .1f; }
-	float Far() const { return 10.f; }
+	float Far() const { return 100.f; }
 
 	void Track(float mousex, float mousey, float z = 0) override;
 

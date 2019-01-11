@@ -3,25 +3,17 @@
 layout(lines) in;
 layout(triangle_strip, max_vertices=4) out;
 
-////
-// Defines
-////
-
-#define HAIR_RADIUS_SCALE 1E-4
 
 ////
 // Ins & Outs.
 ////
 
 in vec3 gs_Position[];
-in vec3 gs_Tangent[];
-in float gs_Scale[];
+in vec4 gs_Tangent[];
 
 out vec3 fs_Position;
-out vec3 fs_Tangent;
-out float fs_Scale;
-out vec3 fs_P0;
-out vec3 fs_P1;
+out vec4 fs_Tangent;
+out vec4 fs_WinE0E1;
 
 ////
 // Uniforms.
@@ -36,86 +28,93 @@ uniform vec2 g_WinSize;
 // Fns.
 ////
 
-void ExpandeFibers(vec3 p0, vec3 p1, vec3 t0, vec3 t1, float s0, float s1);
+void ExpandeFibers(vec3 p0, vec3 p1, vec4 t0, vec4 t1);
 
 void main()
 {
     ExpandeFibers(
         gs_Position[0],gs_Position[1],
-        gs_Tangent[0],gs_Tangent[1],
-        gs_Scale[0],gs_Scale[1]);
+        gs_Tangent[0],gs_Tangent[1]);
 }
 
-void ExpandeFibers(vec3 p0, vec3 p1, vec3 t0, vec3 t1, float s0, float s1)
+void ExpandeFibers(vec3 p0, vec3 p1, vec4 t0, vec4 t1)
 {
-    float ratio0 = s0, ratio1 = s1;
 
     // the thickness of the strand vary from root to tip using a function below
 
-    float radius0 = g_HairRadius * ratio0 * HAIR_RADIUS_SCALE;
-    float radius1 = g_HairRadius * ratio1 * HAIR_RADIUS_SCALE;
+    float ratio0 = fract(t0.w), ratio1 = fract(t1.w);
 
-    t0 = normalize(t0);
-    t1 = normalize(t1);
+    float radius_scale = 1./max(g_WinSize.x,g_WinSize.y);
 
-    vec3 v0 = p0;
-    vec3 v1 = p1;
+    float radius0 = g_HairRadius * ratio0 * radius_scale;
+    float radius1 = g_HairRadius * ratio1 * radius_scale;
 
-    vec3 viewDir0 = normalize(v0 - g_Eye);
-    vec3 right0 = normalize(cross(t0, viewDir0));
+    vec3 nt0 = normalize(t0.xyz);
+    vec3 nt1 = normalize(t1.xyz);
+
+    vec3 viewDir0 = normalize(p0 - g_Eye);
+    vec3 right0 = normalize(cross(nt0, viewDir0));
     vec2 proj_right0 = normalize((g_ViewProj*vec4(right0, 0)).xy);
     
-    vec3 viewDir1 = normalize(v1 - g_Eye);
-    vec3 right1 = normalize(cross(t1, viewDir1));
+    vec3 viewDir1 = normalize(p1 - g_Eye);
+    vec3 right1 = normalize(cross(nt1, viewDir1));
     vec2 proj_right1 = normalize((g_ViewProj*vec4(right1, 0)).xy);
-    
 
     float expandPixels = 0.71; //sqrt(2)/2
-
-    vec2 winSizeRT = g_WinSize;
 
     vec3 tmp1;
     vec4 tmp2;
 
     tmp1 = p0 - right0 * radius0;
     tmp2 = g_ViewProj*vec4(tmp1,1);
-    gl_Position = vec4(tmp2.xyz/tmp2.w,1) - vec4(proj_right0*expandPixels/winSizeRT.y,0,0);
-    fs_Position = v0;
-    fs_P0 = v0;
-    fs_P1 = v1;
-    fs_Tangent = t0;
-    fs_Scale = s0;
-    EmitVertex();
+    vec4 e0_root = vec4(tmp2.xyz/tmp2.w,1) - vec4(proj_right0*expandPixels/g_WinSize.y,0,0);
 
     tmp1 = p1 - right1*radius1;
     tmp2 = g_ViewProj*vec4(tmp1,1);
-    gl_Position = vec4(tmp2.xyz/tmp2.w,1) - vec4(proj_right1*expandPixels/winSizeRT.y,0,0);
-    fs_Position = v1;
-    fs_P0 = v0;
-    fs_P1 = v1;
-    fs_Tangent = t1;
-    fs_Scale = s1;
-    EmitVertex();
-
+    vec4 e0_tip = vec4(tmp2.xyz/tmp2.w,1) - vec4(proj_right1*expandPixels/g_WinSize.y,0,0);
 
     tmp1 = p0 + right0*radius0;
     tmp2 = g_ViewProj*vec4(tmp1,1);
-    gl_Position = vec4(tmp2.xyz/tmp2.w,1) + vec4(proj_right0*expandPixels/winSizeRT.y,0,0);
-    fs_Position = v0;
-    fs_P0 = v0;
-    fs_P1 = v1;
-    fs_Tangent  = t0;
-    fs_Scale = s0;
-    EmitVertex();
+    vec4 e1_root = vec4(tmp2.xyz/tmp2.w,1) + vec4(proj_right0*expandPixels/g_WinSize.y,0,0);
 
     tmp1 = p1 + right1*radius1;
     tmp2 = g_ViewProj*vec4(tmp1,1);
-    gl_Position = vec4(tmp2.xyz/tmp2.w,1) + vec4(proj_right1*expandPixels/winSizeRT.y,0,0);
-    fs_Position = v1;
-    fs_P0 = v0;
-    fs_P1 = v1;
-    fs_Tangent = t1;
-    fs_Scale = s1;
+    vec4 e1_tip = vec4(tmp2.xyz/tmp2.w,1) + vec4(proj_right1*expandPixels/g_WinSize.y,0,0);
+
+    // Fixed: Quad may be rendered as a butterfly-shape.
+    if (dot(proj_right0,proj_right1)<0) {
+        vec4 tmp = e1_tip;
+        e1_tip = e0_tip;
+        e0_tip = tmp;
+    }
+
+    ////
+    // Emit verts.
+    ////
+
+    fs_Position = p0;
+    fs_Tangent = t0;
+    fs_WinE0E1 = vec4(e0_root.xy,e1_root.xy);
+    gl_Position = e0_root;
     EmitVertex();
+
+    fs_Position = p1;
+    fs_Tangent = t1;
+    fs_WinE0E1 = vec4(e0_tip.xy,e1_tip.xy);
+    gl_Position = e0_tip;
+    EmitVertex();
+
+    fs_Position = p0;
+    fs_Tangent  = t0;
+    fs_WinE0E1 = vec4(e0_root.xy,e1_root.xy);
+    gl_Position = e1_root;
+    EmitVertex();
+
+    fs_Position = p1;
+    fs_Tangent = t1;
+    fs_WinE0E1 = vec4(e0_tip.xy,e1_tip.xy);
+    gl_Position = e1_tip;
+    EmitVertex();
+
 
 }

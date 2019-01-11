@@ -252,9 +252,12 @@ void FiberAsset::LoadFromFile(
 		int nvert = num_verts_per_fiber[kthfiber];
 		int fibrandom = xy::Unif<1, 99>(eng);
 		for (int i = 0; i < nvert; ++i) {
-			auto dist = static_cast<float>(i) / (nvert - 1.f);
+			//auto dist = static_cast<float>(i) / (nvert - 1.f);
 			//scales.push_back(fibrandom + xy::Lerp(.95f, .05f, 2.f*(abs(.5 - dist))));
-			scales.push_back(fibrandom + xy::Lerp(.95f, .05f, dist));
+			if (i < nvert - 1)
+				scales.push_back(fibrandom + .99f);
+			else
+				scales.push_back(fibrandom + .25f);
 		}
 	}
 

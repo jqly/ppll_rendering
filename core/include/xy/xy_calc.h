@@ -1399,7 +1399,6 @@ inline std::vector<vec3> ApplyTransform(const mat4 &Trans, const std::vector<vec
 
 constexpr float DegreeToRadian(const float degree)
 {
-	std::numeric_limits<int>::max();
 	return degree * pi<float> / 180.f;
 }
 

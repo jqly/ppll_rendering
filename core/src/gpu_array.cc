@@ -8,8 +8,8 @@
 GpuArray::GpuArray()
 	:
 	vao_{ 0 },
-	bufs_{0},
-	cur_buf_binding_{ 0 }, 
+	bufs_{ 0 },
+	cur_buf_binding_{ 0 },
 	cur_attrib_binding_{ 0 },
 	vertex_count_{ 0 },
 	initialized{ false }
@@ -39,15 +39,22 @@ void GpuArray::Draw(GLenum mode, const std::vector<int> &&attribs) const
 	glBindVertexArray(0);
 }
 
-void GpuArray::DrawLineStrips(const std::vector<int> &&attribs) const
+void GpuArray::DrawLineStrips(const std::vector<int> &&attribs, float keep_ratio) const
 {
 	glBindVertexArray(vao_);
 	for (auto attrib : attribs)
 		glEnableVertexAttribArray(attrib);
 
 	int accsum = 0;
-	for (auto nverts : num_lsverts_) {
-		glDrawArrays(GL_LINE_STRIP, accsum, nverts);
+
+	int keep = static_cast<int>(keep_ratio * 100.);
+
+	for (int i = 0; i < num_lsverts_.size(); ++i) {
+		int nverts = num_lsverts_[i];
+
+		if (i % 100 < keep)
+			glDrawArrays(GL_LINE_STRIP, accsum, nverts);
+
 		accsum += nverts;
 	}
 

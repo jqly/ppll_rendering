@@ -34,7 +34,7 @@ inline std::string GetAssetPath(const char(&a)[N])
 	return path;
 }
 
-static int screen_width = 256, screen_height = 256;
+static int screen_width = 1024, screen_height = 1024;
 
 
 }

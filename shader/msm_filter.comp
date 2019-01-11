@@ -1,0 +1,38 @@
+#version 450 core
+#define KERNEL_SIZE 9
+layout(local_size_x=16,local_size_y=16) in;
+
+layout(binding=0, rgba16) uniform readonly image2D g_MSMSrc;
+layout(binding=1, rgba16) uniform writeonly image2D g_MSMTgt;
+
+uniform int g_KthPass;
+
+void main() 
+{
+    float kernel[] = {
+        0.044695,0.081355,0.124789,
+        0.161305,0.175713,0.161305,
+        0.124789,0.081355,0.044695
+    };
+
+    ivec2 fragpos = ivec2(gl_GlobalInvocationID.xy);
+
+    vec4 depth = vec4(0,0,0,0);
+
+    if (g_KthPass==0) {
+        for (int di=0,i=-KERNEL_SIZE/2; i<=KERNEL_SIZE/2; ++di,++i) {
+            ivec2 pos = fragpos + ivec2(0,i);
+            vec4 moments = imageLoad(g_MSMSrc,pos);
+            depth += kernel[di]*moments;
+        }
+    }
+    else if (g_KthPass==1) {
+        for (int di=0,i=-KERNEL_SIZE/2; i<=KERNEL_SIZE/2; ++di,++i) {
+            ivec2 pos = fragpos + ivec2(i,0);
+            vec4 moments = imageLoad(g_MSMSrc,pos);
+            depth += kernel[di]*moments;
+        }
+    }
+
+    imageStore(g_MSMTgt,fragpos,depth);
+}
